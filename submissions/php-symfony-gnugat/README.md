@@ -6,7 +6,7 @@ Symfony components. No custom HTTP server, no hand-written JSON, no group commit
 | | |
 |---|---|
 | Language | PHP 8.5.11 (ZTS), built into [FrankenPHP's release binary](https://github.com/php/frankenphp/releases/tag/v1.13.0) |
-| Framework | Symfony 8.1 (FrameworkBundle 8.1.8, SecurityBundle, Validator, JsonStreamer, Runtime) |
+| Framework | Symfony 8.1 (FrameworkBundle 8.1.8, SecurityBundle, JsonStreamer, Runtime for the console) |
 | Server | FrankenPHP 1.13.0 (Caddy 2.11.7) in worker mode, with the worker loop of FrankenPHP's docs in `public/index.php` |
 | SQLite driver | PDO SQLite (SQLite 3.45.2) via Doctrine DBAL 4.5 (DoctrineBundle 3.3) |
 | **Nginx or direct** | **Direct**: FrankenPHP serves `HOST:PORT` itself (`0.0.0.0:80` on the droplet) |
@@ -29,7 +29,8 @@ SQLITE_PATH=... JWT_SECRET=... HOST=0.0.0.0 PORT=80 bash start.sh
   reads never go through it. The JWT is checked on every request by an `AccessTokenHandlerInterface`: HS256 signature
   (`hash_hmac` + `hash_equals`), `exp` and, when present, `nbf`. It's hand-written because the challenge's 23-byte
   secret is shorter than RFC 7518's 256-bit minimum for HS256, which the maintained JWT libraries enforce.
-- **Input**: `#[MapRequestPayload]` with Validator constraints.
+- **Input**: `CreatePostPayload::fromRequest()` decodes and checks `POST /posts`'s body (`json_decode()`, `trim()`,
+  `mb_strlen()`), a 400 `BadRequestHttpException` with the spec's message otherwise.
 - **Reads**: a read model. `GET /feed` and `GET /posts/{id}` are one SQL query each, through DBAL, and SQLite writes
   the whole response body (`json_object()`, `json_group_array()`), which is returned as is.
 - **Writes**: one SQL statement each, through DBAL, autocommitted before the response. A like is
@@ -119,7 +120,12 @@ step before, over two rounds):
   `max_threads 8` (3 PHP threads: the 2 workers, 1 for other scripts): +4%;
 - phase 16, no ORM: the repositories get DBAL's `Connection`, without `doctrine/orm` and the entities: +0.5% to +2.9%;
 - phase 17, the worker loop in `public/index.php` instead of `symfony/runtime`'s runner: with phase 16, +5.2% to
-  +12.5% over four rounds, against +2.2% to +6.9% for each alone.
+  +12.5% over four rounds, against +2.2% to +6.9% for each alone;
+- phase 18, `CreatePostPayload::fromRequest()` instead of `#[MapRequestPayload]`, without the Serializer and the
+  Validator: +2.8% to +7.8% over three rounds.
+
+Not kept: PR 40's Caddyfile settings (`php_server` with the worker on `match *`, log level `WARN`, `expose_php 0`),
+-1.9% and -5.3%.
 
 Phases 10 and 12, within noise at a full core, were checked again this way and kept: without prepared-statement
 reuse, -3.8% and -9.6%; with PHP writing the reads' JSON, -1.8% and -2.4%.
