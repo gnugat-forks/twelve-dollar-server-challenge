@@ -94,17 +94,27 @@ Worker rows from phase 6 are measured with 200,000 open files: the rules' 65,535
 6. **DBAL writes** (phase 14): one statement per write instead of the ORM's `find()`, `findOneBy()` and `flush()`
    (BEGIN, INSERT, COMMIT); less memory in worker mode.
 7. Smaller ones: preloading (classic), API-only routing (`rewrite * /index.php` + `php` instead of `php_server`,
-   no `try_files` filesystem checks), the firewall only on `POST /posts`, prepared-statement reuse, `max_threads 8`
-   (FrankenPHP adds threads while requests wait for one, and stops them once idle).
+   no `try_files` filesystem checks), the firewall only on `POST /posts`, prepared-statement reuse.
 8. Direct instead of Nginx: on one vCPU, Nginx's CPU would come out of the application's budget.
 
-Tried and not kept: 8 PHP threads all the time in classic mode (fewer users), `zend.enable_gc=0` (one step or two,
-and a leaking cycle would grow a worker until its restart), `GOMEMLIMIT=1100MiB` (fewer users: FrankenPHP already
-sets it to 90% of the container's memory when it's unset), `GOGC=200` (no gain, more memory).
+Tried and not kept: `max_threads 8` (phase 15, removed after the leaderboard run, see below), 8 PHP threads all the
+time in classic mode (fewer users), `zend.enable_gc=0` (one step or two, and a leaking cycle would grow a worker until
+its restart), `GOMEMLIMIT=1100MiB` (fewer users: FrankenPHP already sets it to 90% of the container's memory when it's
+unset), `GOGC=200` (no gain, more memory).
 
 Where it stops, locally: worker mode on memory from phase 6 on, about 31 KiB per open keep-alive connection, all of
 it Caddy's and Go's (`net/http`'s buffers, goroutine stacks, GC headroom); PHP is about 40 MiB of it at any load.
 Classic mode on CPU.
+
+## On the leaderboard
+
+The leaderboard's 1 vCPU scored phase 15 at 15,500 users, CPU-bound (599 µs of CPU per request), and PR 40, the
+other Symfony + FrankenPHP entry, at 21,000 (428 µs). Locally, at a full core, the server's CPU sits near 50% at any
+load, which hides the gap; throttled to a quarter of the core (`local-bench/compare-pr40.sh`), both saturate and PR
+40 serves 35% more requests, as on the box. Since then, about 4% of it (same throttled setup):
+
+- FrankenPHP's release binary instead of the deb packages, as PR 40 (the same FrankenPHP and PHP versions);
+- no `max_threads 8`: 3 PHP threads, the 2 workers and 1 for other scripts.
 
 ## License
 
