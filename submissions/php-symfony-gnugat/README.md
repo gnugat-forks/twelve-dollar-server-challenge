@@ -5,18 +5,18 @@ Symfony components. No custom HTTP server, no hand-written JSON, no group commit
 
 | | |
 |---|---|
-| Language | PHP 8.5.11 (ZTS), from the deb packages documented in [FrankenPHP's README](https://github.com/php/frankenphp#deb-packages) |
+| Language | PHP 8.5.11 (ZTS), built into [FrankenPHP's release binary](https://github.com/php/frankenphp/releases/tag/v1.13.0) |
 | Framework | Symfony 8.1 (FrameworkBundle 8.1.8, SecurityBundle, Validator, JsonStreamer, Runtime) |
 | Server | FrankenPHP 1.13.0 (Caddy 2.11.7) in worker mode, through `symfony/runtime`'s FrankenPHP runner |
 | SQLite driver | PDO SQLite (SQLite 3.45.2) via Doctrine DBAL 4.5 (DoctrineBundle 3.3, ORM 3.7 for the entity mapping) |
 | **Nginx or direct** | **Direct**: FrankenPHP serves `HOST:PORT` itself (`0.0.0.0:80` on the droplet) |
 
-PHP packages are pinned in `install.sh` (Composer checksum-verified), PHP dependencies in `composer.lock`.
+FrankenPHP and Composer are pinned and checksum-verified in `install.sh`, PHP dependencies in `composer.lock`.
 
 ## Running it
 
 ```bash
-sudo bash install.sh   # apt: frankenphp, php-zts-cli, php-zts-pdo-sqlite (pinned); Composer
+sudo bash install.sh   # FrankenPHP's release binary (PHP built in) and Composer, pinned and checksum-verified
 bash build.sh          # composer install --no-dev --classmap-authoritative, dump-env prod, cache:warmup
 SQLITE_PATH=... JWT_SECRET=... HOST=0.0.0.0 PORT=80 bash start.sh
 ```
