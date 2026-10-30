@@ -100,7 +100,8 @@ Worker rows from phase 6 are measured with 200,000 open files: the rules' 65,535
 Tried and not kept: `max_threads 8` (phase 15, removed after the leaderboard run, see below), 8 PHP threads all the
 time in classic mode (fewer users), `zend.enable_gc=0` (one step or two, and a leaking cycle would grow a worker until
 its restart), `GOMEMLIMIT=1100MiB` (fewer users: FrankenPHP already sets it to 90% of the container's memory when it's
-unset), `GOGC=200` (no gain, more memory).
+unset), `GOGC=200` (no gain, more memory), `GODEBUG=cgocheck=0` (PR 40 sets it; no gain, +0.5% over three
+throttled rounds).
 
 Where it stops, locally: worker mode on memory from phase 6 on, about 31 KiB per open keep-alive connection, all of
 it Caddy's and Go's (`net/http`'s buffers, goroutine stacks, GC headroom); PHP is about 40 MiB of it at any load.
