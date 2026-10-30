@@ -105,7 +105,8 @@ unset), `GOGC=200` (no gain, more memory), `GODEBUG=cgocheck=0` (PR 40 sets it; 
 throttled rounds). SQLite's `cache_size` and `mmap_size`, as PR 40 sets them: no gain. From 2 MiB (the
 default) to 64 MiB per connection, requests stay within 2% of each other, and SQLite reads about as many pages
 (1.6-1.8 `pread64` per request) at every size, likely because a connection drops its cache when another one commits,
-which this load does every few milliseconds. A 1 GiB `mmap_size`: +2.9% and -2.4%.
+which this load does every few milliseconds. A 1 GiB `mmap_size`: +2.9% and -2.4%. Workers that never restart and
+`output_buffering=0`, as in PR 40: within noise over four throttled rounds (-1.3% and -0.1% on average).
 
 Where it stops, locally: worker mode on memory from phase 6 on, about 31 KiB per open keep-alive connection, all of
 it Caddy's and Go's (`net/http`'s buffers, goroutine stacks, GC headroom); PHP is about 40 MiB of it at any load.
