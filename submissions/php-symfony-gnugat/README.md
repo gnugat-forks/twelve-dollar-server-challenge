@@ -7,7 +7,7 @@ Symfony components. No custom HTTP server, no hand-written JSON, no group commit
 |---|---|
 | Language | PHP 8.5.11 (ZTS), built into [FrankenPHP's release binary](https://github.com/php/frankenphp/releases/tag/v1.13.0) |
 | Framework | Symfony 8.1 (FrameworkBundle 8.1.8, SecurityBundle, Validator, JsonStreamer, Runtime) |
-| Server | FrankenPHP 1.13.0 (Caddy 2.11.7) in worker mode, through `symfony/runtime`'s FrankenPHP runner |
+| Server | FrankenPHP 1.13.0 (Caddy 2.11.7) in worker mode, with the worker loop of FrankenPHP's docs in `public/index.php` |
 | SQLite driver | PDO SQLite (SQLite 3.45.2) via Doctrine DBAL 4.5 (DoctrineBundle 3.3) |
 | **Nginx or direct** | **Direct**: FrankenPHP serves `HOST:PORT` itself (`0.0.0.0:80` on the droplet) |
 
@@ -78,7 +78,7 @@ Worker rows from phase 6 are measured with 200,000 open files: the rules' 65,535
 (one keep-alive connection per user), whatever its CPU.
 
 1. **Worker mode** (phase 11): Symfony boots once per worker instead of once per request, ×2.6 users at phase 15.
-   FrankenPHP's defaults are kept (2 workers, restarted every 500 requests by `symfony/runtime`): 1 worker, 4 workers
+   FrankenPHP's defaults are kept (2 workers, restarted every 500 requests): 1 worker, 4 workers
    and never restarting were within noise or worse.
 2. **The JIT** (phase 4): worker mode's long-lived workers keep the traces hot, +40% users there.
 3. **A read model instead of serializing entities** (phases 5 and 7): the `Post` entities' `like_count` was an
@@ -116,7 +116,9 @@ step before, over two rounds):
 
 - FrankenPHP's release binary instead of the deb packages, as PR 40 (the same FrankenPHP and PHP versions), and no
   `max_threads 8` (3 PHP threads: the 2 workers, 1 for other scripts): +4%;
-- phase 16, no ORM: the repositories get DBAL's `Connection`, without `doctrine/orm` and the entities: +0.5% to +2.9%.
+- phase 16, no ORM: the repositories get DBAL's `Connection`, without `doctrine/orm` and the entities: +0.5% to +2.9%;
+- phase 17, the worker loop in `public/index.php` instead of `symfony/runtime`'s runner: with phase 16, +5.2% to
+  +12.5% over four rounds, against +2.2% to +6.9% for each alone.
 
 Phases 10 and 12, within noise at a full core, were checked again this way and kept: without prepared-statement
 reuse, -3.8% and -9.6%; with PHP writing the reads' JSON, -1.8% and -2.4%.

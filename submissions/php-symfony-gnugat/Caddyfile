@@ -7,7 +7,7 @@
 		# (max_threads 8) served fewer requests once the CPU is full (README, "On the leaderboard").
 		# Worker mode: Symfony boots once per thread, then handles requests in a loop.
 		# 2 workers, FrankenPHP's default on 1 CPU (2 per CPU), whatever the CPUs (CI has 4).
-		# Restarted every 500 requests by symfony/runtime.
+		# Restarted every 500 requests by public/index.php.
 		worker {
 			file ./public/index.php
 			num 2
