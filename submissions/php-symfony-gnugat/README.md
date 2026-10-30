@@ -8,7 +8,7 @@ Symfony components. No custom HTTP server, no hand-written JSON, no group commit
 | Language | PHP 8.5.11 (ZTS), built into [FrankenPHP's release binary](https://github.com/php/frankenphp/releases/tag/v1.13.0) |
 | Framework | Symfony 8.1 (FrameworkBundle 8.1.8, SecurityBundle, Validator, JsonStreamer, Runtime) |
 | Server | FrankenPHP 1.13.0 (Caddy 2.11.7) in worker mode, through `symfony/runtime`'s FrankenPHP runner |
-| SQLite driver | PDO SQLite (SQLite 3.45.2) via Doctrine DBAL 4.5 (DoctrineBundle 3.3, ORM 3.7 for the entity mapping) |
+| SQLite driver | PDO SQLite (SQLite 3.45.2) via Doctrine DBAL 4.5 (DoctrineBundle 3.3) |
 | **Nginx or direct** | **Direct**: FrankenPHP serves `HOST:PORT` itself (`0.0.0.0:80` on the droplet) |
 
 FrankenPHP and Composer are pinned and checksum-verified in `install.sh`, PHP dependencies in `composer.lock`.
@@ -35,7 +35,7 @@ SQLITE_PATH=... JWT_SECRET=... HOST=0.0.0.0 PORT=80 bash start.sh
 - **Writes**: one SQL statement each, through DBAL, autocommitted before the response. A like is
   `INSERT ... SELECT ... ON CONFLICT DO NOTHING` (a second query only tells 404 from 200), a post is
   `INSERT ... RETURNING`. Their responses are written by JsonStreamer from `#[JsonStreamable]` output objects.
-  Doctrine ORM entities stay as the schema's mapping.
+  No ORM: the repositories get DBAL's `Connection`.
 - **SQLite**: WAL (set in the database file), and a DBAL driver middleware sets `synchronous=NORMAL` and
   `busy_timeout` on each connection. Connections are persistent (`PDO::ATTR_PERSISTENT`), one per PHP thread.
 - **Prepared statements are reused** (rule 5: they cache the query plan, not data) by another DBAL driver middleware,
@@ -111,10 +111,15 @@ Classic mode on CPU.
 The leaderboard's 1 vCPU scored phase 15 at 15,500 users, CPU-bound (599 µs of CPU per request), and PR 40, the
 other Symfony + FrankenPHP entry, at 21,000 (428 µs). Locally, at a full core, the server's CPU sits near 50% at any
 load, which hides the gap; throttled to a quarter of the core (`local-bench/compare-pr40.sh`), both saturate and PR
-40 serves 35% more requests, as on the box. Since then, about 4% of it (same throttled setup):
+40 serves 35% more requests, as on the box. Since then, in the same throttled setup (requests served, against the
+step before, over two rounds):
 
-- FrankenPHP's release binary instead of the deb packages, as PR 40 (the same FrankenPHP and PHP versions);
-- no `max_threads 8`: 3 PHP threads, the 2 workers and 1 for other scripts.
+- FrankenPHP's release binary instead of the deb packages, as PR 40 (the same FrankenPHP and PHP versions), and no
+  `max_threads 8` (3 PHP threads: the 2 workers, 1 for other scripts): +4%;
+- phase 16, no ORM: the repositories get DBAL's `Connection`, without `doctrine/orm` and the entities: +0.5% to +2.9%.
+
+Phases 10 and 12, within noise at a full core, were checked again this way and kept: without prepared-statement
+reuse, -3.8% and -9.6%; with PHP writing the reads' JSON, -1.8% and -2.4%.
 
 ## License
 
