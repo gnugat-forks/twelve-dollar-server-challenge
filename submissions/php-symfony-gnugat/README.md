@@ -128,6 +128,9 @@ step before, over two rounds):
 - phase 18, `CreatePostPayload::fromRequest()` instead of `#[MapRequestPayload]`, without the Serializer and the
   Validator: +2.8% to +7.8% over three rounds.
 
+Altogether, in one throttled run of three rounds: phase 18 serves 24.5% more requests than the scored commit
+(`8aabfc8`), PR 40 34.6% more (35.5% more users on the box), so PR 40 is now 8.2% ahead of phase 18.
+
 Not kept: PR 40's Caddyfile settings (`php_server` with the worker on `match *`, log level `WARN`, `expose_php 0`),
 -1.9% and -5.3%.
 
